@@ -118,6 +118,18 @@
                     <div class="col-lg-12">
                         <canvas id="district-chart" ></canvas>
                     </div>
+                    <div class="col-lg-12">
+                        <table id="district-table" class="table">
+                            <thead>
+                                <th>#</th>
+                                <th>No. of People</th>
+                                <th>Percentage</th>
+                            </thead>
+                            <tbody id="district-table-body">
+                                
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </main>
@@ -147,6 +159,7 @@
         var myChart = null;
         
         $(document).ready(function(){
+            $("#district-table").addClass("hidden");
             $.when(updateDistrictData()).done(function(){
 //                processStates();
                 generateDistrictDropDown();
@@ -205,21 +218,22 @@
         
         $(document).on("change", "#district-dropdown", function(e){
            e.preventDefault();
+           $("#district-table").addClass("hidden");
            
            var state = $(this).val();
            
            var e_data = {
                type: "bar",
                data: {
-                   labels: ["Active", "Confirmed", "Dead", "Recovered"],
+                   labels: ["Confirmed", "Active", "Recovered", "Dead",],
                    datasets: [{
                        label: "",
                        data: [],
                        backgroundColor: [
-                            'orange',
                             'blue',
-                            'red',
-                            'green'
+                            'orange',
+                            'green',
+                            'red'
                         ],
                        borderWidth: 2
                    }]
@@ -247,14 +261,27 @@
             var label = $(this.options[this.selectedIndex]).closest('optgroup').prop('label');
             
             var e_raw_data = getNested(data, label, 'districtData', state);
-            debugger;
+            
             e_data.data.datasets[0].label = state + " - " + label;
-            e_data.data.datasets[0].data = [e_raw_data.active, e_raw_data.confirmed, e_raw_data.deceased, e_raw_data.recovered];
+            e_data.data.datasets[0].data = [e_raw_data.confirmed, e_raw_data.active, e_raw_data.recovered, e_raw_data.deceased];
             
            }
-           console.log(e_data);
+           
            generateChart("district-chart", e_data);
+           showTable('district-table-body', e_raw_data);
+           $("#district-table").removeClass("hidden");
         });
+        
+        function showTable(id, data){
+            var new_data = [ 
+                ['Confirmed', data.confirmed.toLocaleString('en-IN'), "100%"],
+                ['Active', data.active.toLocaleString('en-IN'), computePercentage(data.active, data.confirmed)+"%"],
+                ["Recovered", data.recovered.toLocaleString('en-IN'), computePercentage(data.recovered, data.confirmed)+"%"],
+                ["Death", data.deceased.toLocaleString('en-IN'), computePercentage(data.deceased, data.confirmed)+"%"]
+            ];
+           
+           $("#"+id).html(createTable(new_data).innerHTML);
+        }
         
         function generateChart(id, data){
             
@@ -266,6 +293,34 @@
             
             myChart = new Chart(ctx, data);
             
+        }
+        
+        function createTable(tableData) {
+            var tableBody = document.createElement('tbody');
+
+            tableData.forEach(function(rowData) {
+              var row = document.createElement('tr');
+
+              rowData.forEach(function(cellData) {
+                var cell = document.createElement('td');
+                cell.appendChild(document.createTextNode(cellData));
+                row.appendChild(cell);
+              });
+
+              tableBody.appendChild(row);
+            });
+
+            return tableBody;
+          }
+        
+        function computePercentage(value, outof){
+            
+            if(value > 0){
+                return ((value / outof) * 100).toFixed(2);
+            }
+            else{
+                return 0;
+            }
         }
         
         function getNested(obj, ...args) {
